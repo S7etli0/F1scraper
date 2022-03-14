@@ -97,7 +97,7 @@ class DataF1Table(QWidget):
         self.innerlay.addWidget(sqltitel)
         self.myImage('menues',3)
 
-        sections = ['calender', 'race_wins', 'driver_ranks', 'team_ranks']
+        sections = ['calendar', 'race_wins', 'driver_ranks', 'team_ranks']
         for x in sections:
             btn = QPushButton(str(x))
             btn.clicked.connect(self.getList)
@@ -122,7 +122,7 @@ class DataF1Table(QWidget):
         secrow = QHBoxLayout()
         self.datalbl = QLabel("Set data:")
         self.combo = QComboBox()
-        sections = ['calender', 'race wins', 'driver ranks', 'team ranks']
+        sections = ['calendar', 'race wins', 'driver ranks', 'team ranks']
         self.combo.addItems(sections)
         secrow.addWidget(self.datalbl)
         secrow.addWidget(self.combo)
@@ -172,21 +172,21 @@ class DataF1Table(QWidget):
             self.erase.setVisible(False)
             self.deletelbl.setVisible(False)
 
-        self.calender = int(self.spinyear.text())
+        self.calendar = int(self.spinyear.text())
         self.data = str(self.combo.currentText())
 
-        if self.data == "team ranks" and self.calender < 1958:
+        if self.data == "team ranks" and self.calendar < 1958:
             QMessageBox.about(self, "Data Error", "No team Competitions before 1958!")
         else:
 
             self.savedata.setVisible(True)
             self.savelbl.setVisible(True)
 
-            if self.data == "calender" or self.data == "race wins":
+            if self.data == "calendar" or self.data == "race wins":
                 links = ['races']
                 var = 8
 
-                if self.data == 'calender':
+                if self.data == 'calendar':
                     self.tabheader = ['country', 'date', 'laps', 'duration']
                     numbers = [0,1,6,7]
                 else:
@@ -208,7 +208,7 @@ class DataF1Table(QWidget):
             for sector in links:
 
                 driver = webdriver.Chrome()
-                website = "https://www.formula1.com/en/results.html/{}/{}.html".format(self.calender, sector)
+                website = "https://www.formula1.com/en/results.html/{}/{}.html".format(self.calendar, sector)
                 driver.get(website)
                 webpage = driver.find_element(By.TAG_NAME, "body")
 
@@ -258,7 +258,7 @@ class DataF1Table(QWidget):
                 self.makeTable()
 
             self.myImage(self.data.replace(" ","-"),0)
-            self.titel.setText("List of the " + self.data + " for the " + str(self.calender) + " Formula 1 Season")
+            self.titel.setText("List of the " + self.data + " for the " + str(self.calendar) + " Formula 1 Season")
             self.cols = int(len(self.tabheader))
             self.rows = int(len(self.content))
 
@@ -279,7 +279,7 @@ class DataF1Table(QWidget):
         # curs.execute("CREATE DATABASE IF NOT EXISTS formula1")
         # mydb.commit()
 
-        name = (self.data + " " + str(self.calender)).replace(" ", "_")
+        name = (self.data + " " + str(self.calendar)).replace(" ", "_")
         ask = QMessageBox.question(self, "Saving Table",
                 "Do you want to save table " + name + " ?", QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
 
@@ -466,7 +466,7 @@ class DataF1Table(QWidget):
         self.innerlay.addWidget(sqltitel)
         self.myImage('menues',3)
 
-        sections = ['calender', 'race_wins', 'driver_ranks', 'team_ranks']
+        sections = ['calendar', 'race_wins', 'driver_ranks', 'team_ranks']
         for x in sections:
             btn = QPushButton(str(x))
             btn.clicked.connect(self.getList)
@@ -568,7 +568,7 @@ class DataF1Table(QWidget):
 
         self.table.setHorizontalHeaderLabels(myheader)
 
-        if 'calender' not in self.titel.text():
+        if 'calendar' not in self.titel.text():
             header.setStretchLastSection(False)
         else:
             header.setStretchLastSection(True)
