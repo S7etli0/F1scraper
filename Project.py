@@ -13,22 +13,16 @@ from PyQt5.QtWidgets import QWidget, QTabWidget, QApplication, QProgressBar, QSc
     QPushButton, QRadioButton, QButtonGroup, QLabel, QComboBox, QSpinBox, QMessageBox
 
 
-mydb = con.connect(
+mydb = con.connect( 
     host="localhost",
     user="root",
     passwd="Slav7528dokumape"
 )
 
-# check whole page
-# pictures,font,align
-# Innertab layout, Keys
-# 1956, resize, sort
-# out methods, def
-# remove repeats
-# descriptions
-# set values
-# request + soup
-# classes
+# rename formula1 database
+# rename imgpics to images
+# rename alender to alendar
+
 
 css_Style = """
 
@@ -101,7 +95,7 @@ class DataF1Table(QWidget):
         self.VisualTab()
 
     def VisualTab(self):
-        self.setWindowTitle("Formula1 Data V3")
+        self.setWindowTitle("Formula1")
         self.setWindowIcon(QIcon("imgpics/f1-logo.png"))
         self.setGeometry(100, 100, 350, 350)
         self.sideSQLtab()
@@ -235,7 +229,6 @@ class DataF1Table(QWidget):
 
         self.calender = int(self.spinyear.text())
         self.data = str(self.combo.currentText())
-        self.fullnames = {}
 
         if self.data == "team ranks" and self.calender < 1958:
             QMessageBox.about(self, "Data Error", "No team Competitions before 1958!")
@@ -257,13 +250,13 @@ class DataF1Table(QWidget):
 
                 rec = requests.get(website)
                 site_html = rec.text
-                crawler = soup(site_html, 'lxml')
-                table = soup.select(crawler, "tbody>tr")
+                scrape = soup(site_html, 'lxml')
+                table = soup.select(scrape, "tbody>tr")
 
                 self.content = []
 
                 for td in table:
-                    racelist = td.text.strip().replace("\n", "/").replace("     ", "").strip("").split("/")
+                    racelist = td.text.strip().replace("     ", "").split("\n")
                     racelist = list(filter(lambda x: x != '', racelist))
 
                     while len(racelist) < var:
@@ -274,13 +267,9 @@ class DataF1Table(QWidget):
 
                             if racelist[5] not in numbers:
                                 numbers[racelist[5]] = str(racelist[1]) + " " + str(racelist[2])
-                                # numbers[racelist[5]] = str(racelist[3])
-                                # self.fullnames[racelist[5]] = str(racelist[1]) + " " + str(racelist[2])
                             else:
-                            # elif str(numbers[racelist[5]]).count('&') < 3:
+                            # elif str(numbers[racelist[5]]).count('&') =< 3:
                                 numbers[racelist[5]] += " & " +str(racelist[1]) + " " + str(racelist[2])
-                                # numbers[racelist[5]] += " & " + str(racelist[3])
-                                # self.fullnames[racelist[5]] += " & " +str(racelist[1]) + " " + str(racelist[2])
 
                         else:
                             rowdatas = []
@@ -318,10 +307,7 @@ class DataF1Table(QWidget):
         self.goBack()
 
     def SQLsave(self):
-        # curs = mydb.cursor()
-        # curs.execute("CREATE DATABASE IF NOT EXISTS formula1")
-        # mydb.commit()
-
+        self.makeDB()
         name = (self.data + " " + str(self.calender)).replace(" ", "_")
         ask = QMessageBox.question(self, "Saving Table", "Do you want to save table " + name + " ?",
                                    QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
@@ -376,10 +362,7 @@ class DataF1Table(QWidget):
 
 
     def getList(self):
-        # curs = mydb.cursor()
-        # curs.execute("CREATE DATABASE IF NOT EXISTS formula1")
-        # mydb.commit()
-
+        self.makeDB()
         curs = mydb.cursor()
         curs.execute("USE formula1")
         curs.execute("SHOW TABLES")
@@ -649,9 +632,6 @@ class DataF1Table(QWidget):
             header.setSectionResizeMode(1, QHeaderView.Stretch)
             header.setStretchLastSection(False)
 
-            # for i in range(tabrow):
-            #     self.table.item(i, 1).setToolTip(str(self.fullnames[filler[i][0]]))
-
         else:
             header.setSectionResizeMode(QHeaderView.ResizeToContents)
 
@@ -669,16 +649,14 @@ class DataF1Table(QWidget):
         x = 470 + (tabrow + 1) * 40
         if self.sorthide==False or x>850:
             self.setFixedHeight(850)
+            
             if self.sorthide!=False:
                 self.table.setFixedHeight(375)
-                print("X")
             else:
                 self.table.setFixedHeight(340)
-                print("Z")
         else:
             self.setFixedHeight(x)
             self.table.setFixedHeight(x - 470)
-            print("Y")
 
 
     def sorting(self):
@@ -739,6 +717,11 @@ class DataF1Table(QWidget):
             self.tabheader = ['team_name', 'drivers', 'points']
 
         return links, var, self.tabheader, numbers
+
+    def makeDB(self):
+        curs = mydb.cursor()
+        curs.execute("CREATE DATABASE IF NOT EXISTS formula1")
+        mydb.commit()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

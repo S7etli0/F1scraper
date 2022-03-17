@@ -2,18 +2,21 @@ import time
 import datetime
 import mysql.connector as con
 
-import requests
-from bs4 import BeautifulSoup as soup
-
 import sys
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QIcon, QPixmap, QColor
+from PyQt5.QtGui import QIcon, QColor
 from PyQt5.QtWidgets import QWidget, QTabWidget, QApplication, QProgressBar, QScrollArea, \
     QTableWidget, QTableWidgetItem, QHeaderView, QGridLayout, QVBoxLayout, QHBoxLayout, \
     QPushButton, QRadioButton, QButtonGroup, QLabel, QComboBox, QSpinBox, QMessageBox
 
+from F1Pro.F1images import tabImage
+from F1css import css_Style
+from F1Loader import MultipleData
+from F1dataScrape import WebScrape
+from F1TabList import listSet
+from F1Height import tabHeight
 
-mydb = con.connect(
+mydb = con.connect( 
     host="localhost",
     user="root",
     passwd="Slav7528dokumape"
@@ -30,70 +33,6 @@ mydb = con.connect(
 # request + soup
 # classes
 
-css_Style = """
-
-    QWidget#RedWid{
-        background-color: red;
-    }
-    
-    QWidget#BlackWid{
-        background-color: black;
-    }
-
-    QWidget#White, QComboBox{
-        background-color: white;
-        font-size: 14px;
-    }    
-    
-    QWidget, QPushButton, QLabel{ 
-        font-size: 16px;
-        border-radius: 10px;
-    }
-    
-    QPushButton, QRadioButton, QLabel#RedLab, QLabel#Titel, QLabel#BlackLab, QLabel#Titel{ 
-        color: white;
-    }
-    
-    QLabel#BlackLab, QLabel#Titel{ 
-        background-color: black;
-        border: 5px solid black;
-    }
-    
-    QLabel#Titel{ 
-        font-size: 20px;
-    }
-    
-    QLabel#RedLab{ 
-        background-color: red;
-        border: 5px solid red;
-    }
-    
-    QPushButton{ 
-        background-color: black;
-        border: 5px solid black;
-    }
-    
-    QPushButton#RedBtn, QPushButton#Mar{ 
-        background-color: red;
-        border: 5px solid red;
-    }
-    
-    QPushButton:hover{
-        font-size: 20px;
-    }
-    
-    QPushButton:pressed, QPushButton#RedBtn:pressed, QPushButton#Mar:pressed{
-        color: white;
-        background-color: darkred;
-        border: 5px solid darkred;
-    }
-    
-    QPushButton#Mar{
-        margin-top: 10px;        
-    }
-
-"""
-
 
 class DataF1Table(QWidget):
     def __init__(self):
@@ -101,8 +40,8 @@ class DataF1Table(QWidget):
         self.VisualTab()
 
     def VisualTab(self):
-        self.setWindowTitle("Formula1 Data V3")
-        self.setWindowIcon(QIcon("imgpics/f1-logo.png"))
+        self.setWindowTitle("Formula1 Database")
+        self.setWindowIcon(QIcon("images/f1-logo.png"))
         self.setGeometry(100, 100, 350, 350)
         self.sideSQLtab()
         self.setMainTab()
@@ -114,6 +53,12 @@ class DataF1Table(QWidget):
         self.sqltabs = QWidget()
         self.innerlay = QVBoxLayout()
         self.sqltabs.setLayout(self.innerlay)
+
+        self.eraselbl = QLabel()
+        self.savelbl = QLabel()
+        self.layload = QVBoxLayout()
+        self.introlbl = QLabel()
+
         self.goBack()
 
     def setMainTab(self):
@@ -133,15 +78,12 @@ class DataF1Table(QWidget):
         self.titel = QLabel("The Results You are Looking For will Appear in a Table")
         self.titel.setAlignment(Qt.AlignCenter)
         self.titel.setObjectName("Titel")
+
         self.mainwid.addWidget(self.titel)
-
-        self.introlbl = QLabel()
-        self.myImage('startup', 0)
+        tabImage('startup', 0, self.introlbl)
         self.mainwid.addWidget(self.introlbl)
-
         self.mainwid.addLayout(self.tablay)
         self.mainwid.addWidget(self.sortwid)
-        # self.stretcher(self.mainwid)
 
         self.loadtab = QProgressBar()
         self.loadtab.setMinimum(0)
@@ -157,11 +99,10 @@ class DataF1Table(QWidget):
         self.tabright.setLayout(self.mainwid)
         self.mygrid.addWidget(self.tabright, 0, 1)
 
-        self.layload = QVBoxLayout()
         loadwid = QWidget()
         loadwid.setLayout(self.layload)
 
-        self.myImage('menu', 4)
+        tabImage('menu', 4, self.layload)
         firstrow = QHBoxLayout()
         self.spinlbl = QLabel("Set year:")
         self.spinlbl.setObjectName("RedLab")
@@ -175,7 +116,7 @@ class DataF1Table(QWidget):
         self.datalbl = QLabel("Set data:")
         self.datalbl.setObjectName("RedLab")
         self.combo = QComboBox()
-        sections = ['calender', 'race wins', 'driver ranks', 'team ranks']
+        sections = ['calendar', 'race wins', 'driver ranks', 'team ranks']
         self.combo.addItems(sections)
         secrow.addWidget(self.datalbl)
         secrow.addWidget(self.combo)
@@ -184,8 +125,7 @@ class DataF1Table(QWidget):
         btn.setObjectName("Mar")
         btn.clicked.connect(self.race_results)
 
-        self.savelbl = QLabel()
-        self.myImage('saves', 2)
+        tabImage('saves', 2, self.savelbl)
         self.savelbl.setVisible(False)
 
         self.savedata = QPushButton("Create SQL Table")
@@ -233,54 +173,43 @@ class DataF1Table(QWidget):
             self.eraselbl.setVisible(False)
             self.sortbool = False
 
-        self.calender = int(self.spinyear.text())
-        self.data = str(self.combo.currentText())
-        self.fullnames = {}
+        calendar = int(self.spinyear.text())
+        data = str(self.combo.currentText())
 
-        if self.data == "team ranks" and self.calender < 1958:
+        if data == "team ranks" and calendar < 1958:
             QMessageBox.about(self, "Data Error", "No team Competitions before 1958!")
         else:
 
             self.savedata.setVisible(True)
             self.savelbl.setVisible(True)
-            links, var, self.tabheader, numbers = self.MultipleData()
+            links, var, self.tabheader, numbers = MultipleData(data)
 
             for sector in links:
 
-                website = "https://www.formula1.com/en/results.html/{}/{}.html".format(self.calender, sector)
-
+                table = WebScrape(calendar, sector)
                 pages = 7
                 while pages:
                     time.sleep(0.5)
                     pages -= 1
                     self.progressload(pages)
 
-                rec = requests.get(website)
-                site_html = rec.text
-                crawler = soup(site_html, 'lxml')
-                table = soup.select(crawler, "tbody>tr")
-
                 self.content = []
 
-                for td in table:
-                    racelist = td.text.strip().replace("\n", "/").replace("     ", "").strip("").split("/")
+                for trow in table:
+                    racelist = trow.text.strip().replace("     ", "").split("\n")
                     racelist = list(filter(lambda x: x != '', racelist))
 
                     while len(racelist) < var:
                         racelist.append("")
 
-                    if self.data == "team ranks":
+                    if data == "team ranks":
                         if sector == "drivers":
 
                             if racelist[5] not in numbers:
                                 numbers[racelist[5]] = str(racelist[1]) + " " + str(racelist[2])
-                                # numbers[racelist[5]] = str(racelist[3])
-                                # self.fullnames[racelist[5]] = str(racelist[1]) + " " + str(racelist[2])
                             else:
-                            # elif str(numbers[racelist[5]]).count('&') < 3:
+                            # elif str(numbers[racelist[5]]).count('&') =< 3:
                                 numbers[racelist[5]] += " & " +str(racelist[1]) + " " + str(racelist[2])
-                                # numbers[racelist[5]] += " & " + str(racelist[3])
-                                # self.fullnames[racelist[5]] += " & " +str(racelist[1]) + " " + str(racelist[2])
 
                         else:
                             rowdatas = []
@@ -303,33 +232,32 @@ class DataF1Table(QWidget):
             self.makeTable()
             self.tabwid.setObjectName("BlackWid")
 
-            self.myImage(self.data.replace(" ", "-"), 0)
-            self.titel.setText("List of the " + self.data.title() + " for the " + str(self.calender) + " Formula 1 Season")
+            tabImage(data.replace(" ", "-"), 0, self.introlbl)
+            self.titel.setText("List of the " + data.title() + " for the " + str(calendar) + " Formula 1 Season")
             self.cols = int(len(self.tabheader))
             self.rows = int(len(self.content))
 
-            self.fillTable(self.rows, self.cols, self.content, self.tabheader)
-
-            order = []
+            vertic = []
             for i in range(self.rows):
-                order.append(str(i + 1))
-            self.table.setVerticalHeaderLabels(order)
+                vertic.append(str(i + 1))
+
+            self.fillTable(self.rows, self.cols, self.content, self.tabheader, vertic)
 
         self.goBack()
 
     def SQLsave(self):
-        # curs = mydb.cursor()
-        # curs.execute("CREATE DATABASE IF NOT EXISTS formula1")
-        # mydb.commit()
+        self.makeDB()
+        calendar = int(self.spinyear.text())
+        data = str(self.combo.currentText())
 
-        name = (self.data + " " + str(self.calender)).replace(" ", "_")
+        name = (data + " " + str(calendar)).replace(" ", "_")
         ask = QMessageBox.question(self, "Saving Table", "Do you want to save table " + name + " ?",
                                    QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
 
         if ask == QMessageBox.Yes:
 
             curs = mydb.cursor()
-            curs.execute("USE formula1")
+            curs.execute("USE formula1db")
             curs.execute("SHOW TABLES")
 
             alltables = []
@@ -349,7 +277,7 @@ class DataF1Table(QWidget):
     def createSQL(self, name):
         stock = []
         curs = mydb.cursor()
-        curs.execute("USE formula1")
+        curs.execute("USE formula1db")
 
         curs.execute("CREATE TABLE IF NOT EXISTS " + name + " (id int PRIMARY KEY AUTO_INCREMENT)")
         for x in range(self.cols):
@@ -376,12 +304,9 @@ class DataF1Table(QWidget):
 
 
     def getList(self):
-        # curs = mydb.cursor()
-        # curs.execute("CREATE DATABASE IF NOT EXISTS formula1")
-        # mydb.commit()
-
+        self.makeDB()
         curs = mydb.cursor()
-        curs.execute("USE formula1")
+        curs.execute("USE formula1db")
         curs.execute("SHOW TABLES")
         listname = self.sender().text()
 
@@ -396,7 +321,7 @@ class DataF1Table(QWidget):
         maintag.setObjectName("BlackLab")
         maintag.setAlignment(Qt.AlignCenter)
         self.innerlay.addWidget(maintag)
-        self.myImage('menues', 3)
+        tabImage('menues', 3, self.innerlay)
 
         lbltag = QLabel("Select year:")
         lbltag.setObjectName("BlackLab")
@@ -421,10 +346,8 @@ class DataF1Table(QWidget):
 
         clearlbl = QLabel()
         self.innerlay.addWidget(clearlbl)
-
-        self.eraselbl = QLabel()
         self.innerlay.addWidget(self.eraselbl)
-        self.myImage('btn-del', 1)
+        tabImage('btn-del', 1, self.eraselbl)
 
         self.erase = QPushButton("Erase SQL Table")
         self.erase.clicked.connect(self.eraseTab)
@@ -451,7 +374,7 @@ class DataF1Table(QWidget):
             curs = mydb.cursor()
             curs.execute("SELECT * FROM " + self.ref)
 
-            self.listSet(curs)
+            cellsdata,vertic,self.rows = listSet(curs)
             if self.tablemade != False:
                 self.tablay.removeWidget(self.tabwid)
             self.makeTable()
@@ -464,8 +387,7 @@ class DataF1Table(QWidget):
             self.colname.pop(0)
             self.cols = len(self.colname)
 
-            self.myImage(self.listvar.replace("_", "-"), 0)
-
+            tabImage(self.listvar.replace("_", "-"), 0, self.introlbl)
             mytitle = self.ref.split("_")
             if len(mytitle) > 2:
                 self.titel.setText(
@@ -478,8 +400,7 @@ class DataF1Table(QWidget):
             self.erase.setVisible(True)
             self.eraselbl.setVisible(True)
 
-            self.table.setVerticalHeaderLabels(self.vertic)
-            self.fillTable(self.rows, self.cols, self.transfer, self.colname)
+            self.fillTable(self.rows, self.cols, cellsdata, self.colname, vertic)
 
             if self.sortbool == True:
                 self.clearLay(self.sortlay)
@@ -520,14 +441,13 @@ class DataF1Table(QWidget):
 
     def goBack(self):
         self.clearLay(self.innerlay)
-
         sqltitel = QLabel("Choose a Table Category")
         sqltitel.setObjectName("BlackLab")
         sqltitel.setAlignment(Qt.AlignCenter)
         self.innerlay.addWidget(sqltitel)
-        self.myImage('menues', 3)
+        tabImage('menues', 3, self.innerlay)
 
-        sections = ['calender', 'race_wins', 'driver_ranks', 'team_ranks']
+        sections = ['calendar', 'race_wins', 'driver_ranks', 'team_ranks']
         btnlay = QVBoxLayout()
         for x in sections:
             btn = QPushButton(str(x))
@@ -558,7 +478,6 @@ class DataF1Table(QWidget):
         self.scroll = QScrollArea()
         self.form.addWidget(self.scroll)
         self.scroll.setVisible(False)
-
         self.tablay.addWidget(self.tabwid)
 
     def progressload(self, pages):
@@ -577,7 +496,7 @@ class DataF1Table(QWidget):
 
         if ask == QMessageBox.Yes:
             curs = mydb.cursor()
-            curs.execute("USE formula1")
+            curs.execute("USE formula1db")
             curs.execute("DROP TABLE " + deltab)
             mydb.commit()
             QMessageBox.about(self, "Delete Table", "The table was erased from the database!")
@@ -585,35 +504,11 @@ class DataF1Table(QWidget):
         else:
             pass
 
-    def myImage(self, picname, look):
-        intropic = QPixmap("imgpics/f1-" + picname + ".jpg")
-        wd, ln = 260, 110
 
-        if look == 1:
-            self.eraselbl.setPixmap(intropic.scaled(wd, ln, Qt.KeepAspectRatio))
-        elif look == 2:
-            self.savelbl.setPixmap(intropic.scaled(wd, ln, Qt.KeepAspectRatio))
-
-        elif look == 3 or look == 4:
-            self.sqlpic = QLabel()
-            self.sqlpic.setPixmap(intropic.scaled(wd, ln, Qt.KeepAspectRatio))
-            self.sqlpic.setAlignment(Qt.AlignCenter)
-
-            if look == 3:
-                self.innerlay.addWidget(self.sqlpic)
-            else:
-                loadlabl = QLabel("Scrape Data from the Website")
-                loadlabl.setObjectName("BlackLab")
-                loadlabl.setAlignment(Qt.AlignCenter)
-                self.layload.addWidget(loadlabl)
-                self.layload.addWidget(self.sqlpic)
-        else:
-            self.introlbl.setPixmap(intropic)
-            self.introlbl.setAlignment(Qt.AlignCenter)
-
-    def fillTable(self, tabrow, tabcol, filler, myheader):
+    def fillTable(self, tabrow, tabcol, filler, myheader, vertic):
         self.table.setRowCount(tabrow)
         self.table.setColumnCount(tabcol)
+        self.table.setVerticalHeaderLabels(vertic)
 
         color = QColor(190,190,190)
         for rw in range(tabrow):
@@ -640,7 +535,7 @@ class DataF1Table(QWidget):
             self.table.resizeColumnToContents(j)
             max += self.table.columnWidth(j)
 
-        if 'Calender' in self.titel.text():
+        if 'Calendar' in self.titel.text():
             for i in range(tabcol):
                 header.setSectionResizeMode(i, QHeaderView.Stretch)
             header.setSectionResizeMode(tabcol - 1, QHeaderView.ResizeToContents)
@@ -648,9 +543,6 @@ class DataF1Table(QWidget):
         elif 'Team' in self.titel.text():
             header.setSectionResizeMode(1, QHeaderView.Stretch)
             header.setStretchLastSection(False)
-
-            # for i in range(tabrow):
-            #     self.table.item(i, 1).setToolTip(str(self.fullnames[filler[i][0]]))
 
         else:
             header.setSectionResizeMode(QHeaderView.ResizeToContents)
@@ -666,20 +558,7 @@ class DataF1Table(QWidget):
             self.table.setMinimumWidth(max)
             self.setFixedWidth(1050)
 
-        x = 470 + (tabrow + 1) * 40
-        if self.sorthide==False or x>850:
-            self.setFixedHeight(850)
-            if self.sorthide!=False:
-                self.table.setFixedHeight(375)
-                print("X")
-            else:
-                self.table.setFixedHeight(340)
-                print("Z")
-        else:
-            self.setFixedHeight(x)
-            self.table.setFixedHeight(x - 470)
-            print("Y")
-
+        tabHeight(self,self.sorthide,tabrow)
 
     def sorting(self):
         if self.asc.isChecked():
@@ -689,7 +568,7 @@ class DataF1Table(QWidget):
 
         sorter = self.sortbox.currentText()
         curs = mydb.cursor()
-        curs.execute("USE formula1")
+        curs.execute("USE formula1db")
         if sorter == "date" or sorter == "id" or sorter == "points":
             curs.execute("SELECT * FROM " + self.ref + " ORDER BY id" + " " + direct)
         elif sorter == "laps":
@@ -697,48 +576,18 @@ class DataF1Table(QWidget):
         else:
             curs.execute("SELECT * FROM " + self.ref + " ORDER BY " + sorter + " " + direct)
 
-        self.listSet(curs)
-        self.table.setVerticalHeaderLabels(self.vertic)
-        self.fillTable(self.rows, self.cols, self.transfer, self.colname)
+        cellsdata,vertic,rows = listSet(curs)
+        self.fillTable(rows, self.cols, cellsdata, self.colname, vertic)
 
     def clearLay(self, layout):
         for i in reversed(range(layout.count())):
             if layout.itemAt(i).widget():
                 layout.itemAt(i).widget().setParent(None)
 
-    def listSet(self, curs):
-        self.transfer = []
-        self.vertic = []
-        for x in curs:
-            self.transfer.append(x[1:len(x)])
-            self.vertic.append(str(x[0]))
-        self.rows = len(self.transfer)
-
-
-    def MultipleData(self):
-        if self.data == "calender" or self.data == "race wins":
-            links = ['races']
-            var = 8
-
-            if self.data == 'calender':
-                self.tabheader = ['country', 'date', 'laps', 'duration']
-                numbers = [0, 1, 6, 7]
-            else:
-                self.tabheader = ['country', 'first_name', 'last_name', 'nickname', 'team_name']
-                numbers = [0, 2, 3, 4, 5]
-
-        elif self.data == 'driver ranks':
-            links = ['drivers']
-            var = 7
-            self.tabheader = ['first_name', 'last_name', 'nationality', 'team_name', 'points']
-            numbers = [1, 2, 4, 5, 6]
-        else:
-            links = ['drivers', 'team']
-            var = 3
-            numbers = {}
-            self.tabheader = ['team_name', 'drivers', 'points']
-
-        return links, var, self.tabheader, numbers
+    def makeDB(self):
+        curs = mydb.cursor()
+        curs.execute("CREATE DATABASE IF NOT EXISTS formula1db")
+        mydb.commit()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
