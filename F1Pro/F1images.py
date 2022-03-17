@@ -8,10 +8,8 @@ def tabImage(picname, look, addimg):
 
     if look == 1:
         addimg.setPixmap(intropic.scaled(wd, ln, Qt.KeepAspectRatio))
-    elif look == 2:
-        addimg.setPixmap(intropic.scaled(wd, ln, Qt.KeepAspectRatio))
 
-    elif look == 3 or look == 4:
+    elif look > 2:
         sqlpic = QLabel()
         sqlpic.setPixmap(intropic.scaled(wd, ln, Qt.KeepAspectRatio))
         sqlpic.setAlignment(Qt.AlignCenter)

@@ -481,6 +481,7 @@ class DataF1Table(QWidget):
                 order = QLabel("Order by:")
                 order.setObjectName("RedLab")
                 self.asc = QRadioButton("ASC")
+                self.asc.setChecked(True)
                 self.des = QRadioButton("DESC")
                 gr = QButtonGroup()
                 gr.addButton(self.asc)

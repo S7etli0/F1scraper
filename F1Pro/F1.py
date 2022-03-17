@@ -1,4 +1,3 @@
-import time
 import datetime
 import mysql.connector as con
 
@@ -15,6 +14,9 @@ from F1Loader import MultipleData
 from F1dataScrape import WebScrape
 from F1TabList import listSet
 from F1Height import tabHeight
+from F1Teams import TeamContent
+from F1LoadBar import progressload
+from F1adjustLay import adjustLay
 
 mydb = con.connect( 
     host="localhost",
@@ -43,10 +45,10 @@ class DataF1Table(QWidget):
         self.setWindowTitle("Formula1 Database")
         self.setWindowIcon(QIcon("images/f1-logo.png"))
         self.setGeometry(100, 100, 350, 350)
+        self.setObjectName("RedWid")
         self.sideSQLtab()
         self.setMainTab()
         self.sideWEBtab()
-        self.setObjectName("RedWid")
         self.show()
 
     def sideSQLtab(self):
@@ -78,18 +80,18 @@ class DataF1Table(QWidget):
         self.titel = QLabel("The Results You are Looking For will Appear in a Table")
         self.titel.setAlignment(Qt.AlignCenter)
         self.titel.setObjectName("Titel")
-
-        self.mainwid.addWidget(self.titel)
-        tabImage('startup', 0, self.introlbl)
-        self.mainwid.addWidget(self.introlbl)
-        self.mainwid.addLayout(self.tablay)
-        self.mainwid.addWidget(self.sortwid)
+        tabImage('startup', 2, self.introlbl)
 
         self.loadtab = QProgressBar()
         self.loadtab.setMinimum(0)
-        self.loadtab.setMaximum(5)
+        self.loadtab.setMaximum(10)
         self.loadtab.setVisible(False)
-        self.mainwid.addWidget(self.loadtab)
+
+        addtoMainwid = [self.titel,self.introlbl,self.tablay,self.sortwid,self.loadtab]
+        for item in addtoMainwid:
+            if item!=self.tablay:
+                self.mainwid.addWidget(item)
+            else: self.mainwid.addLayout(item)
 
 
     def sideWEBtab(self):
@@ -125,7 +127,7 @@ class DataF1Table(QWidget):
         btn.setObjectName("Mar")
         btn.clicked.connect(self.race_results)
 
-        tabImage('saves', 2, self.savelbl)
+        tabImage('saves', 1, self.savelbl)
         self.savelbl.setVisible(False)
 
         self.savedata = QPushButton("Create SQL Table")
@@ -145,14 +147,10 @@ class DataF1Table(QWidget):
         doublay.addWidget(firstlay)
         doublay.addWidget(seclay)
 
-        self.layload.addWidget(doubwid)
-        self.layload.addWidget(btn)
-
         clearlab = QLabel()
-        self.layload.addWidget(clearlab)
-
-        self.layload.addWidget(self.savelbl)
-        self.layload.addWidget(self.savedata)
+        addtoLayload = [doubwid,btn,clearlab,self.savelbl,self.savedata]
+        for item in addtoLayload:
+            self.layload.addWidget(item)
         self.layload.addStretch()
 
         self.maintab = QTabWidget()
@@ -166,7 +164,7 @@ class DataF1Table(QWidget):
     def race_results(self):
 
         if self.sortbool == True:
-            self.clearLay(self.sortlay)
+            adjustLay(self.sortlay,True)
             self.sorthide=True
             self.sortwid.setVisible(False)
             self.erase.setVisible(False)
@@ -187,42 +185,22 @@ class DataF1Table(QWidget):
             for sector in links:
 
                 table = WebScrape(calendar, sector)
-                pages = 7
-                while pages:
-                    time.sleep(0.5)
-                    pages -= 1
-                    self.progressload(pages)
-
+                progressload(self.loadtab)
                 self.content = []
 
-                for trow in table:
-                    racelist = trow.text.strip().replace("     ", "").split("\n")
+                for tabrow in table:
+                    racelist = tabrow.text.strip().replace("     ", "").split("\n")
                     racelist = list(filter(lambda x: x != '', racelist))
 
                     while len(racelist) < var:
                         racelist.append("")
+                    rowdatas = []
 
                     if data == "team ranks":
-                        if sector == "drivers":
-
-                            if racelist[5] not in numbers:
-                                numbers[racelist[5]] = str(racelist[1]) + " " + str(racelist[2])
-                            else:
-                            # elif str(numbers[racelist[5]]).count('&') =< 3:
-                                numbers[racelist[5]] += " & " +str(racelist[1]) + " " + str(racelist[2])
-
-                        else:
-                            rowdatas = []
-                            rowdatas.append(racelist[1])
-                            if racelist[1] in numbers:
-                                rowdatas.append(numbers[str(racelist[1])])
-                            else:
-                                rowdatas.append("")
-                            rowdatas.append(racelist[2])
-                            self.content.append(rowdatas)
+                        teaminfo = TeamContent(sector,numbers,racelist,rowdatas)
+                        self.content.append(teaminfo)
 
                     else:
-                        rowdatas = []
                         for cell in numbers:
                             rowdatas.append(racelist[cell])
                         self.content.append(rowdatas)
@@ -310,7 +288,7 @@ class DataF1Table(QWidget):
         curs.execute("SHOW TABLES")
         listname = self.sender().text()
 
-        self.clearLay(self.innerlay)
+        adjustLay(self.innerlay,True)
         self.allcontent = []
         for x in curs:
             titel = str(x)[1:-1].replace(",", "")
@@ -325,44 +303,36 @@ class DataF1Table(QWidget):
 
         lbltag = QLabel("Select year:")
         lbltag.setObjectName("BlackLab")
-        self.listing = QComboBox()
-        self.listing.addItems(self.allcontent)
+        self.yearlist = QComboBox()
+        self.yearlist.addItems(self.allcontent)
         twoinone = QHBoxLayout()
         twoinone.addWidget(lbltag)
-        twoinone.addWidget(self.listing)
+        twoinone.addWidget(self.yearlist)
         twolinewid = QWidget()
         twolinewid.setObjectName("RedWid")
         twolinewid.setLayout(twoinone)
-        self.innerlay.addWidget(twolinewid)
 
         btn = QPushButton("Load SQL Table")
         btn.clicked.connect(self.getSQLtab)
-        self.innerlay.addWidget(btn)
         self.listvar = listname
 
         backbtn = QPushButton("Back to Menu")
         backbtn.clicked.connect(self.goBack)
-        self.innerlay.addWidget(backbtn)
 
         clearlbl = QLabel()
-        self.innerlay.addWidget(clearlbl)
-        self.innerlay.addWidget(self.eraselbl)
         tabImage('btn-del', 1, self.eraselbl)
 
         self.erase = QPushButton("Erase SQL Table")
         self.erase.clicked.connect(self.eraseTab)
-        self.innerlay.addWidget(self.erase)
+
+        addtoInnerLay = [twolinewid,btn,backbtn,clearlbl,self.eraselbl,self.erase]
+        for item in addtoInnerLay:
+            self.innerlay.addWidget(item)
 
         self.eraselbl.setVisible(False)
         self.erase.setVisible(False)
-        self.stretcher(self.innerlay)
+        adjustLay(self.innerlay,False)
 
-    def stretcher(self, layspace):
-        stretch = QWidget()
-        strlay = QVBoxLayout()
-        strlay.addStretch()
-        stretch.setLayout(strlay)
-        layspace.addWidget(stretch)
 
     def getSQLtab(self):
 
@@ -370,13 +340,13 @@ class DataF1Table(QWidget):
         if len(self.allcontent) == 0:
             QMessageBox.about(self,"Empty Database","No tables are Saved in this Category!")
         else:
-            self.ref = self.listvar + "_" + str(self.listing.currentText())
+            self.ref = self.listvar + "_" + str(self.yearlist.currentText())
             curs = mydb.cursor()
             curs.execute("SELECT * FROM " + self.ref)
 
             cellsdata,vertic,self.rows = listSet(curs)
             if self.tablemade != False:
-                self.tablay.removeWidget(self.tabwid)
+                self.tablay.removeWidget(self.tabwid) 
             self.makeTable()
 
             self.colname = []
@@ -387,7 +357,7 @@ class DataF1Table(QWidget):
             self.colname.pop(0)
             self.cols = len(self.colname)
 
-            tabImage(self.listvar.replace("_", "-"), 0, self.introlbl)
+            tabImage(self.listvar.replace("_", "-"), 2, self.introlbl)
             mytitle = self.ref.split("_")
             if len(mytitle) > 2:
                 self.titel.setText(
@@ -403,7 +373,7 @@ class DataF1Table(QWidget):
             self.fillTable(self.rows, self.cols, cellsdata, self.colname, vertic)
 
             if self.sortbool == True:
-                self.clearLay(self.sortlay)
+                adjustLay(self.sortlay,True)
                 self.sortbool = False
 
             if self.sortbool == False:
@@ -419,6 +389,7 @@ class DataF1Table(QWidget):
                 order = QLabel("Order by:")
                 order.setObjectName("RedLab")
                 self.asc = QRadioButton("ASC")
+                self.asc.setChecked(True)
                 self.des = QRadioButton("DESC")
                 gr = QButtonGroup()
                 gr.addButton(self.asc)
@@ -428,19 +399,16 @@ class DataF1Table(QWidget):
                 sortbtn.setObjectName("RedBtn")
                 sortbtn.clicked.connect(self.sorting)
 
-                self.sortlay.addWidget(sortlbl)
-                self.sortlay.addWidget(self.sortbox)
-                self.sortlay.addWidget(order)
-                self.sortlay.addWidget(self.asc)
-                self.sortlay.addWidget(self.des)
-                self.sortlay.addWidget(sortbtn)
+                addtoSortlay = [sortlbl,self.sortbox,order,self.asc,self.des,sortbtn]
+                for item in addtoSortlay:
+                    self.sortlay.addWidget(item)
 
                 self.sortwid.setLayout(self.sortlay)
                 self.sortbool = True
 
 
     def goBack(self):
-        self.clearLay(self.innerlay)
+        adjustLay(self.innerlay,True)
         sqltitel = QLabel("Choose a Table Category")
         sqltitel.setObjectName("BlackLab")
         sqltitel.setAlignment(Qt.AlignCenter)
@@ -460,7 +428,7 @@ class DataF1Table(QWidget):
         btnwid.setLayout(btnlay)
         self.innerlay.addWidget(btnwid)
 
-        self.stretcher(self.innerlay)
+        adjustLay(self.innerlay,False)
 
     def makeTable(self):
         self.tablemade = True
@@ -480,16 +448,9 @@ class DataF1Table(QWidget):
         self.scroll.setVisible(False)
         self.tablay.addWidget(self.tabwid)
 
-    def progressload(self, pages):
-        self.loadtab.setVisible(True)
-
-        if pages != 0:
-            self.loadtab.setValue(6 - pages)
-        else:
-            self.loadtab.setVisible(False)
 
     def eraseTab(self):
-        year = str(self.listing.currentText())
+        year = str(self.yearlist.currentText())
         deltab = self.listvar + "_" + year
         ask = QMessageBox.question(self, "Delete Table", "Do you want to drop table " + deltab + " ?",
                                    QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
@@ -579,10 +540,6 @@ class DataF1Table(QWidget):
         cellsdata,vertic,rows = listSet(curs)
         self.fillTable(rows, self.cols, cellsdata, self.colname, vertic)
 
-    def clearLay(self, layout):
-        for i in reversed(range(layout.count())):
-            if layout.itemAt(i).widget():
-                layout.itemAt(i).widget().setParent(None)
 
     def makeDB(self):
         curs = mydb.cursor()
